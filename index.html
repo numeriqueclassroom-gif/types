@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atelier 2 : Les différentes IA</title>
+    <style>
+        :root {
+            --primary: #2d8659;
+            --primary-light: #4aaf73;
+            --primary-dark: #1a4d2e;
+            --accent-blue: #4a90e2;
+            --accent-orange: #f39c12;
+            --accent-purple: #9b59b6;
+            --text: #333;
+            --text-light: #666;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --border-radius: 15px;
+            --transition: all 0.3s ease;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, #2d5f3f 50%, #3d7552 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text);
+            position: relative;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(155, 89, 182, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(255, 159, 67, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 20%, rgba(74, 144, 226, 0.1) 0%, transparent 50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .container { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; }
+        header {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            border: 1px solid rgba(74, 175, 115, 0.2);
+        }
+        h1 {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            font-weight: 800;
+        }
+        .subtitle { color: var(--text-light); font-size: 1.1em; line-height: 1.6; }
+        .section {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            border: 1px solid rgba(74, 175, 115, 0.2);
+            display: none;
+        }
+        .section.active { display: block; animation: fadeIn 0.8s ease-out; }
+        .section h2 {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .instruction {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(74, 175, 115, 0.1);
+            border-radius: 10px;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+        .categories-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .category-box {
+            background: linear-gradient(135deg, rgba(74, 175, 115, 0.08), rgba(45, 134, 89, 0.08));
+            border: 2px solid rgba(74, 175, 115, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 200px;
+            transition: var(--transition);
+        }
+        .category-box.over { background: rgba(74, 175, 115, 0.2); transform: scale(1.02); }
+        .category-content { min-height: 120px; }
+        .draggable-item {
+            background: white;
+            border: 2px solid rgba(74, 175, 115, 0.4);
+            border-radius: 10px;
+            padding: 12px 20px;
+            cursor: move;
+            transition: var(--transition);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            font-size: 0.95em;
+        }
+        .draggable-item:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(74, 175, 115, 0.3); }
+        .draggable-item.placed { display: none; }
+        .placed-item {
+            background: white;
+            border: 1px solid rgba(74, 175, 115, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 5px;
+            font-size: 0.9em;
+            display: inline-block;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .placed-item:hover { background: rgba(220, 53, 69, 0.1); border-color: #dc3545; transform: scale(0.95); }
+        .placed-item:hover::after { content: ' ✕'; color: #dc3545; font-weight: bold; }
+        .schema-step {
+            position: relative;
+            padding: 25px;
+            margin: 20px 0;
+            background: linear-gradient(135deg, rgba(74, 175, 115, 0.1), rgba(45, 134, 89, 0.05));
+            border-left: 5px solid var(--primary);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .schema-step:hover { transform: translateX(10px); box-shadow: 0 5px 20px rgba(74, 175, 115, 0.2); }
+        .schema-step-content {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(74, 175, 115, 0.2);
+            line-height: 1.6;
+            color: #555;
+        }
+        .schema-step.active .schema-step-content { display: block; animation: fadeIn 0.5s ease-out; }
+        .info-bubble {
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            background: linear-gradient(135deg, var(--accent-blue), #3a7bc8);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 22px;
+            font-size: 0.85em;
+            font-weight: bold;
+            cursor: help;
+            margin-left: 8px;
+            position: relative;
+        }
+        .info-bubble:hover::after {
+            content: attr(data-info);
+            position: absolute;
+            left: 30px;
+            top: -10px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            width: 250px;
+            font-size: 0.9em;
+            font-weight: normal;
+            line-height: 1.4;
+            z-index: 1000;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+        .visual-box {
+            background: linear-gradient(135deg, rgba(74, 144, 226, 0.1), rgba(155, 89, 182, 0.05));
+            border: 2px dashed var(--accent-blue);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .visual-icon { font-size: 3em; margin-bottom: 10px; }
+        .result {
+            text-align: center;
+            font-size: 1.1em;
+            margin: 20px auto;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+            max-width: 80%;
+        }
+        .result.success {
+            background: rgba(40, 167, 69, 0.15);
+            color: #155724;
+            border: 2px solid #28a745;
+            display: block;
+        }
+        .history-content { max-width: 800px; margin: 0 auto; text-align: left; }
+        .history-text { margin-bottom: 20px; line-height: 1.8; }
+        .history-text ul { margin-left: 25px; margin-top: 10px; }
+        .history-text li { margin-bottom: 8px; }
+        .goal-box {
+            background: linear-gradient(135deg, rgba(74, 175, 115, 0.1), rgba(155, 89, 182, 0.05));
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 25px;
+            border-left: 5px solid var(--accent-purple);
+        }
+        .goal-box ul { margin-left: 25px; margin-top: 10px; }
+        .goal-box li { margin-bottom: 8px; }
+        .case-study {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border: 2px solid rgba(74, 175, 115, 0.2);
+        }
+        .case-study:nth-child(2) { border-top: 4px solid var(--accent-blue); }
+        .case-study:nth-child(3) { border-top: 4px solid var(--accent-orange); }
+        .case-study:nth-child(4) { border-top: 4px solid var(--accent-purple); }
+        .case-scenario {
+            background: rgba(74, 175, 115, 0.08);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 1em;
+            line-height: 1.6;
+        }
+        .case-question { font-weight: 600; color: var(--primary); margin-bottom: 10px; }
+        .case-discussion {
+            padding: 15px;
+            background: rgba(248, 252, 250, 0.5);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .case-discussion ul { margin-left: 25px; margin-top: 10px; }
+        .case-discussion li { margin-bottom: 5px; }
+        .show-answers-btn {
+            display: block;
+            margin: 15px auto;
+            padding: 10px 30px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .show-answers-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(45, 134, 89, 0.3); }
+        .case-answers {
+            display: none;
+            margin-top: 15px;
+            padding: 20px;
+            background: rgba(74, 175, 115, 0.08);
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+        .case-answers.show { display: block; }
+        .answer-category { margin-bottom: 15px; }
+        .answer-category ul { margin-left: 25px; margin-top: 5px; }
+        .answer-category li { margin-bottom: 5px; }
+        .answer-title { font-weight: 600; color: var(--primary); margin-bottom: 8px; }
+        .synthesis-section {
+            margin-top: 30px;
+            padding: 25px;
+            background: rgba(74, 175, 115, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(74, 175, 115, 0.3);
+        }
+        .synthesis-stats { margin-bottom: 20px; text-align: center; line-height: 1.6; }
+        .textarea-response {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid rgba(74, 175, 115, 0.3);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1em;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        .textarea-response:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 175, 115, 0.1);
+        }
+        .action-btn {
+            display: block;
+            margin: 25px auto;
+            padding: 15px 45px;
+            font-size: 1.1em;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 10px 30px rgba(74, 175, 115, 0.3);
+        }
+        .action-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(74, 175, 115, 0.4); }
+        .bilan-box {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(74, 175, 115, 0.1), rgba(74, 144, 226, 0.05));
+            border-radius: 15px;
+            border: 2px solid rgba(74, 175, 115, 0.3);
+        }
+        .bilan-box p { margin-bottom: 15px; line-height: 1.8; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8em; }
+            .section { padding: 20px; }
+            .categories-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Atelier 2 : Les différentes IA</h1>
+            <p class="subtitle">Comment fonctionnent les intelligences artificielles ?<br>Focus sur les IA génératives</p>
+        </header>
+
+        <!-- PARTIE 1 -->
+        <div class="section active" id="section1">
+            <h2>📂 Partie 1 : Les IA du quotidien</h2>
+            <div class="instruction">
+                <strong>🎯 Objectif :</strong> Glissez-déposez les exemples dans la bonne catégorie d'IA.
+            </div>
+            <div class="categories-container">
+                <div class="category-box" data-category="recommandation">
+                    <div style="font-weight: 700; font-size: 1.1em; color: var(--accent-blue); margin-bottom: 15px; text-align: center; padding-bottom: 10px; border-bottom: 2px solid rgba(74, 144, 226, 0.3);">🎬 IA de Recommandation</div>
+                    <div class="category-content"></div>
+                </div>
+                <div class="category-box" data-category="reconnaissance">
+                    <div style="font-weight: 700; font-size: 1.1em; color: var(--accent-orange); margin-bottom: 15px; text-align: center; padding-bottom: 10px; border-bottom: 2px solid rgba(243, 156, 18, 0.3);">👁️ IA de Reconnaissance</div>
+                    <div class="category-content"></div>
+                </div>
+                <div class="category-box" data-category="prediction">
+                    <div style="font-weight: 700; font-size: 1.1em; color: var(--accent-purple); margin-bottom: 15px; text-align: center; padding-bottom: 10px; border-bottom: 2px solid rgba(155, 89, 182, 0.3);">🔮 IA de Prédiction</div>
+                    <div class="category-content"></div>
+                </div>
+                <div class="category-box" data-category="traitement">
+                    <div style="font-weight: 700; font-size: 1.1em; color: var(--primary); margin-bottom: 15px; text-align: center; padding-bottom: 10px; border-bottom: 2px solid rgba(45, 134, 89, 0.3);">💬 IA de Traitement du langage</div>
+                    <div class="category-content"></div>
+                </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin: 30px 0; padding: 30px; background: rgba(248, 252, 250, 0.8); border-radius: 15px; border: 1px solid rgba(74, 175, 115, 0.2);">
+                <p style="width: 100%; text-align: center; color: var(--text-light); font-size: 0.95em; margin-bottom: 10px;">💡 <em>Astuce : Cliquez sur une capsule déjà placée pour la retirer</em></p>
+                <div class="draggable-item" draggable="true" data-category="recommandation">Netflix suggère des films</div>
+                <div class="draggable-item" draggable="true" data-category="recommandation">Spotify crée des playlists</div>
+                <div class="draggable-item" draggable="true" data-category="reconnaissance">Déverrouillage par empreinte</div>
+                <div class="draggable-item" draggable="true" data-category="reconnaissance">Identification des visages</div>
+                <div class="draggable-item" draggable="true" data-category="prediction">Prévisions météo avancées</div>
+                <div class="draggable-item" draggable="true" data-category="prediction">Détection de fraude bancaire</div>
+                <div class="draggable-item" draggable="true" data-category="traitement">Correcteur orthographique</div>
+                <div class="draggable-item" draggable="true" data-category="traitement">Traduction Google</div>
+                <div class="draggable-item" draggable="true" data-category="recommandation">Amazon propose des produits</div>
+                <div class="draggable-item" draggable="true" data-category="reconnaissance">Filtres Instagram</div>
+                <div class="draggable-item" draggable="true" data-category="prediction">GPS optimise l'itinéraire</div>
+                <div class="draggable-item" draggable="true" data-category="traitement">Filtres anti-spam</div>
+            </div>
+            <button class="action-btn" onclick="checkCategories()">Vérifier mes réponses</button>
+            <div class="result" id="result1"></div>
+            <button class="action-btn" id="nextBtn1" style="display: none;" onclick="goToSection(2)">Continuer vers la Partie 2 ➡️</button>
+        </div>
+
+        <!-- PARTIE 2 -->
+        <div class="section" id="section2">
+            <h2>⚙️ Partie 2 : Comment ça marche ?</h2>
+            <div class="instruction">
+                <strong>🎯 Objectif :</strong> Cliquez sur chaque étape pour découvrir comment une IA apprend et fonctionne.
+            </div>
+            <div class="visual-box">
+                <div class="visual-icon">🔄</div>
+                <p><strong>Le cycle de vie d'une IA</strong></p>
+                <p style="font-size: 0.95em; color: var(--text-light); margin-top: 10px;">Données → Entraînement → Modèle → Prédiction</p>
+            </div>
+            <div style="max-width: 800px; margin: 40px auto; padding: 40px; background: white; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                <div class="schema-step" onclick="toggleStep(this)">
+                    <span style="display: inline-block; width: 40px; height: 40px; background: linear-gradient(135deg, var(--accent-blue), #3a7bc8); color: white; border-radius: 50%; text-align: center; line-height: 40px; font-weight: bold; font-size: 1.2em; margin-right: 15px;">1</span>
+                    <span style="font-size: 1.3em; font-weight: 700; color: var(--accent-blue);">📊 Les Données</span>
+                    <span class="info-bubble" data-info="Les données sont comme le carburant d'une voiture : sans elles, l'IA ne peut rien apprendre !">i</span>
+                    <div class="schema-step-content">
+                        <p><strong>Le carburant de l'IA</strong> : Tout commence par les données ! Des milliers, voire des millions d'exemples sont collectés.</p>
+                        <p style="margin-top: 10px;">💡 <em>Exemple :</em> Pour apprendre à reconnaître un chat, l'IA analyse des milliers d'images de chats avec l'étiquette "chat".</p>
+                        <div class="visual-box" style="margin-top: 15px;">
+                            <div style="font-size: 2.5em; letter-spacing: 5px;">🐱 🐱 🐱 🐱 🐱 🐱 🐱 🐱 🐱 🐱</div>
+                            <div style="font-size: 1.5em; margin-top: 10px;">• • • • • • • • • •</div>
+                            <p style="margin-top: 10px;"><strong>10 000+ exemples</strong> = apprentissage possible</p>
+                        </div>
+                        <p style="margin-top: 10px;">⚠️ <strong>Attention :</strong> La qualité des données détermine la qualité de l'IA. Des données biaisées = une IA biaisée !</p>
+                    </div>
+                </div>
+                <div class="schema-step" onclick="toggleStep(this)">
+                    <span style="display: inline-block; width: 40px; height: 40px; background: linear-gradient(135deg, var(--accent-orange), #e67e22); color: white; border-radius: 50%; text-align: center; line-height: 40px; font-weight: bold; font-size: 1.2em; margin-right: 15px;">2</span>
+                    <span style="font-size: 1.3em; font-weight: 700; color: var(--accent-orange);">🎓 L'Entraînement</span>
+                    <span class="info-bubble" data-info="Machine Learning = apprentissage automatique à partir d'exemples">i</span>
+                    <div class="schema-step-content">
+                        <p><strong>L'apprentissage par l'exemple</strong> : L'IA analyse les données pour trouver des patterns, des régularités.</p>
+                        <p style="margin-top: 10px;">💡 <em>Analogie :</em> Comme un enfant qui apprend à reconnaître les animaux en voyant des images dans un livre.</p>
+                        
+                        <div style="margin-top: 20px; padding: 20px; background: rgba(243, 156, 18, 0.1); border-radius: 10px; border-left: 4px solid var(--accent-orange);">
+                            <p><strong>🧠 Deep Learning : Comment ça marche ?</strong></p>
+                            <p style="margin-top: 10px;">Le <strong>Deep Learning</strong> (apprentissage profond) utilise des <strong>réseaux de neurones artificiels</strong> inspirés du cerveau humain :</p>
+                            <ul style="margin-left: 25px; margin-top: 10px;">
+                                <li><strong>Couches successives</strong> : L'information passe à travers plusieurs "couches" de neurones artificiels</li>
+                                <li><strong>Extraction progressive</strong> : Chaque couche détecte des patterns de plus en plus complexes
+                                    <ul style="margin-left: 20px; margin-top: 5px;">
+                                        <li>Couche 1 : détecte les contours, les formes simples</li>
+                                        <li>Couche 2 : détecte les textures, les motifs</li>
+                                        <li>Couche 3 : détecte des parties d'objets (oreilles, yeux...)</li>
+                                        <li>Couche finale : reconnaît l'objet complet (un chat !)</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Ajustement automatique</strong> : Le réseau ajuste ses "poids" pour améliorer ses prédictions</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="visual-box" style="margin-top: 15px;">
+                            <div class="visual-icon">🧠</div>
+                            <p><strong>Réseau de neurones</strong> = millions de connexions qui apprennent ensemble</p>
+                            <p style="font-size: 0.9em; margin-top: 5px;">Plus le réseau est "profond" (beaucoup de couches), plus il peut apprendre des tâches complexes</p>
+                        </div>
+                        
+                        <p style="margin-top: 15px;"><em>💡 Exemple concret :</em> Pour reconnaître un chat, le réseau apprend d'abord les formes basiques (lignes, courbes), puis les textures (poils), puis les parties du corps (oreilles, moustaches), et enfin l'animal complet.</p>
+                    </div>
+                </div>
+                <div class="schema-step" onclick="toggleStep(this)">
+                    <span style="display: inline-block; width: 40px; height: 40px; background: linear-gradient(135deg, var(--accent-purple), #8e44ad); color: white; border-radius: 50%; text-align: center; line-height: 40px; font-weight: bold; font-size: 1.2em; margin-right: 15px;">3</span>
+                    <span style="font-size: 1.3em; font-weight: 700; color: var(--accent-purple);">🧠 Le Modèle</span>
+                    <span class="info-bubble" data-info="Le modèle est le résultat de l'entraînement : l'IA prête à l'emploi">i</span>
+                    <div class="schema-step-content">
+                        <p><strong>Le résultat de l'entraînement</strong> : Après l'apprentissage, on obtient un modèle = l'IA entraînée.</p>
+                        <p style="margin-top: 10px;">Ce modèle contient les règles apprises pour accomplir sa tâche (reconnaître, prédire, recommander, traduire...).</p>
+                        <div class="visual-box" style="margin-top: 15px;">
+                            <div class="visual-icon">⚙️</div>
+                            <p>Le modèle = une boîte qui transforme des entrées en sorties</p>
+                        </div>
+                        <p style="margin-top: 10px;">💡 <em>Important :</em> Le modèle ne comprend pas vraiment, il détecte des patterns statistiques.</p>
+                    </div>
+                </div>
+                <div class="schema-step" onclick="toggleStep(this)">
+                    <span style="display: inline-block; width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; border-radius: 50%; text-align: center; line-height: 40px; font-weight: bold; font-size: 1.2em; margin-right: 15px;">4</span>
+                    <span style="font-size: 1.3em; font-weight: 700; color: var(--primary);">
+                    🎯 La Prédiction</span>
+                    <span class="info-bubble" data-info="L'IA utilise ce qu'elle a appris pour traiter de nouvelles données jamais vues">i</span>
+                    <div class="schema-step-content">
+                        <p><strong>L'IA en action</strong> : Le modèle reçoit de nouvelles données (jamais vues) et fait des prédictions.</p>
+                        <p style="margin-top: 10px;">💡 <em>Exemples :</em></p>
+                        <ul style="margin-left: 25px; margin-top: 10px;">
+                            <li>Une nouvelle photo → C'est un chat avec 98% de confiance</li>
+                            <li>Votre historique → Vous aimerez probablement ce film</li>
+                            <li>Un email → C'est du spam avec 85% de probabilité</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <button class="action-btn" onclick="validatePart2()">J'ai compris ! Continuer 📜</button>
+        </div>
+
+        <!-- PARTIE 3 -->
+        <div class="section" id="section3">
+            <h2>💥 Partie 3 : L'explosion des IA génératives</h2>
+            <div class="instruction">
+                <strong>🎯 Objectif :</strong> Découvrez pourquoi les IA génératives ont connu un essor fulgurant.
+            </div>
+            <div class="history-content">
+                <div class="history-text">
+                    <p>Jusqu'en 2020, les IA étaient surtout spécialisées. Mais en 2022-2023, les <strong>IA génératives</strong> ont explosé grâce à :</p>
+                    <ul>
+                        <li><strong>L'augmentation de la puissance de calcul</strong> (GPU, cloud)</li>
+                        <li><strong>L'accès à des données massives</strong> (Internet, livres, médias)</li>
+                        <li><strong>Les progrès des Transformers</strong> (architecture de deep learning, 2017)</li>
+                        <li><strong>La démocratisation</strong> via des interfaces grand public (ChatGPT, MidJourney)</li>
+                    </ul>
+                </div>
+                <div class="history-text">
+                    <p><strong>Pourquoi cet engouement ?</strong></p>
+                    <ul>
+                        <li>💰 <strong>Modèle économique</strong> : Monopolisation de l'accès à l'information</li>
+                        <li>🤖 <strong>Objectif ultime</strong> : Développer une <strong>IA généraliste</strong> (AGI)</li>
+                    </ul>
+                </div>
+                <div class="goal-box">
+                    <div style="font-size: 1.3em; font-weight: 700; color: var(--primary); margin-bottom: 15px;">🧠 Qu'est-ce qu'une IA généraliste (AGI) ?</div>
+                    <p>Une AGI serait capable de :</p>
+                    <ul>
+                        <li>Comprendre et raisonner sur <strong>n'importe quel sujet</strong> (comme un humain)</li>
+                        <li>Apprendre <strong>sans données spécifiques</strong> (transférer ses connaissances)</li>
+                        <li>S'adapter à <strong>des tâches inconnues</strong> (pas seulement prédire)</li>
+                    </ul>
+                    <p style="margin-top: 15px;"><strong>Enjeux :</strong></p>
+                    <ul>
+                        <li>⚠️ <strong>Risques</strong> : Perte de contrôle, biais amplifiés, désinformation</li>
+                        <li>⚖️ <strong>Éthique</strong> : Qui décide de ses objectifs ? Comment la réguler ?</li>
+                        <li>🌍 <strong>Sociétal</strong> : Impact sur l'emploi, l'éducation, la créativité</li>
+                    </ul>
+                </div>
+            </div>
+            <button class="action-btn" onclick="goToSection(4)">Continuer vers les cas pratiques 📚</button>
+        </div>
+
+        <!-- PARTIE 4 -->
+        <div class="section" id="section4">
+            <h2>📚 Partie 4 : Réflexions pédagogiques</h2>
+            <div class="instruction">
+                <strong>🎯 Consigne :</strong> Discutez de chaque scénario en équipe. Les pistes proposées sont non exhaustives et s'appuient sur le cadre national.
+                <div style="margin-top: 15px; padding: 15px; background: rgba(74, 144, 226, 0.1); border-radius: 8px; font-size: 0.95em;">
+                    <strong>📋 Rappel cadre institutionnel :</strong> Le <em>cadre de référence des compétences numériques</em> (CRCN) et les recommandations ministérielles encouragent une approche d'<strong>éducation critique</strong> plutôt que d'interdiction. La posture varie selon le niveau : au collège, encadrement plus strict ; au lycée, autonomie progressive.
+                </div>
+            </div>
+            <div class="case-study">
+                <div class="case-scenario">
+                    <strong>📚 Cas 1 :</strong>
+                    <div class="case-question">
+                        Vos élèves utilisent <strong>ChatGPT</strong> pour rédiger leurs devoirs. Comment réagir ?
+                    </div>
+                    <div class="case-discussion">
+                        <strong>Points à aborder en équipe :</strong>
+                        <ul>
+                            <li>Comment détecter l'usage sans tomber dans la surveillance ?</li>
+                            <li>Quels apprentissages sont menacés ?</li>
+                            <li>Comment transformer cette pratique en opportunité pédagogique ?</li>
+                        </ul>
+                    </div>
+                    <button class="show-answers-btn" onclick="showAnswers(1)">Voir des pistes de réflexion</button>
+                    <div class="case-answers" id="answers1">
+                        <div style="padding: 15px; background: rgba(74, 175, 115, 0.05); border-radius: 8px; margin-bottom: 15px; font-style: italic; color: #666;">
+                            <strong>Note :</strong> Ces pistes sont non exhaustives et doivent être adaptées à votre contexte d'enseignement.
+                        </div>
+                        <div class="answer-category">
+                            <div class="answer-title">🎯 Se former pour mieux accompagner :</div>
+                            <ul>
+                                <li><strong>Connaître les IA</strong> pour identifier leur usage (styles génériques, incohérences) sans recourir aux détecteurs automatiques (peu fiables selon les recommandations du cadre national)</li>
+                                <li><strong>Expérimenter soi-même</strong> pour comprendre leurs forces et faiblesses</li>
+                                <li><strong>Échanger en équipe</strong> sur les pratiques observées</li>
+                            </ul>
+                        </div>
+                        <div class="answer-category">
+                            <div class="answer-title">🔍 Expliciter les enjeux avec les élèves :</div>
+                            <ul>
+                                <li><strong>Impact sur l'apprentissage</strong> : mémorisation, réflexion, appropriation des connaissances</li>
+                                <li><strong>Compétences critiques</strong> : vérification des sources, hallucinations, biais</li>
+                                <li><strong>Impact écologique</strong> : coût énergétique des requêtes IA</li>
+                                <li><strong>Enjeux éthiques</strong> : plagiat, droit d'auteur, propriété intellectuelle</li>
+                            </ul>
+                        </div>
+                        <div class="answer-category">
+                            <div class="answer-title">📐 Adapter ses pratiques (selon le niveau) :</div>
+                            <ul>
+                                <li><strong>Collège</strong> : encadrement strict, usage guidé en classe uniquement</li>
+                                <li><strong>Lycée</strong> : autoriser des usages cadrés (brainstorming, reformulation) avec déclaration obligatoire</li>
+                                <li><strong>Concevoir des tâches</strong> résistantes aux IA (analyse personnelle, esprit critique, créativité, oral)</li>
+                                <li><strong>Valoriser le processus</strong> : brouillons, étapes intermédiaires, carnet de bord</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="case-study">
+                    <div class="case-scenario">
+                        <strong>🎨 Cas 2 :</strong>
+                        <div class="case-question">
+                            Un élève utilise <strong>DALL-E</strong> pour illustrer un exposé. Que faire ?
+                        </div>
+                        <div class="case-discussion">
+                            <strong>Points à aborder en équipe :</strong>
+                            <ul>
+                                <li>Est-ce différent d'utiliser une image trouvée sur Internet ?</li>
+                                <li>Quelles questions éthiques cela soulève-t-il ?</li>
+                                <li>Comment l'intégrer de manière pédagogique ?</li>
+                            </ul>
+                        </div>
+                        <button class="show-answers-btn" onclick="showAnswers(2)">Voir des pistes de réflexion</button>
+                        <div class="case-answers" id="answers2">
+                            <div style="padding: 15px; background: rgba(74, 175, 115, 0.05); border-radius: 8px; margin-bottom: 15px; font-style: italic; color: #666;">
+                                <strong>Note :</strong> Ces pistes sont non exhaustives et visent à nourrir votre réflexion collective.
+                            </div>
+                            <div class="answer-category">
+                                <div class="answer-title">💡 Opportunités pédagogiques :</div>
+                                <ul>
+                                    <li><strong>Accessibilité créative</strong> pour tous les élèves, y compris ceux sans compétences en dessin</li>
+                                    <li><strong>Expérimentation</strong> de styles artistiques variés</li>
+                                    <li><strong>Apprentissage du prompt</strong> (description précise, itération)</li>
+                                </ul>
+                            </div>
+                            <div class="answer-category">
+                                <div class="answer-title">⚖️ Questions éthiques à aborder :</div>
+                                <ul>
+                                    <li><strong>Droit d'auteur</strong> : les IA sont entraînées sur des œuvres existantes</li>
+                                    <li><strong>Biais stéréotypés</strong> : représentations culturelles, de genre, ethniques</li>
+                                    <li><strong>Dévalorisation du travail artistique</strong> humain</li>
+                                    <li><strong>Transparence</strong> : obligation de mentionner l'usage d'une IA</li>
+                                </ul>
+                            </div>
+                            <div class="answer-category">
+                                <div class="answer-title">🎓 Pistes d'intégration :</div>
+                                <ul>
+                                    <li><strong>Imposer la citation</strong> de l'outil utilisé et du prompt</li>
+                                    <li><strong>Analyser les biais</strong> : comparer plusieurs générations, discuter des représentations</li>
+                                    <li><strong>Combiner avec d'autres compétences</strong> : justifier le choix esthétique, retoucher l'image</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="case-study">
+                    <div class="case-scenario">
+                        <strong>✏️ Cas 3 :</strong>
+                        <div class="case-question">
+                            Des élèves utilisent <strong>DeepL Write</strong> ou d'autres correcteurs IA. Comment gérer ?
+                        </div>
+                        <div class="case-discussion">
+                            <strong>Points à aborder en équipe :</strong>
+                            <ul>
+                                <li>Quelle différence avec un correcteur classique ?</li>
+                                <li>Comment préserver l'apprentissage de l'orthographe et de la syntaxe ?</li>
+                                <li>Quel usage raisonnable promouvoir ?</li>
+                            </ul>
+                        </div>
+                        <button class="show-answers-btn" onclick="showAnswers(3)">Voir des pistes de réflexion</button>
+                        <div class="case-answers" id="answers3">
+                            <div style="padding: 15px; background: rgba(74, 175, 115, 0.05); border-radius: 8px; margin-bottom: 15px; font-style: italic; color: #666;">
+                                <strong>Note :</strong> Ces pistes sont à adapter selon votre discipline et le niveau de vos élèves.
+                            </div>
+                            <div class="answer-category">
+                                <div class="answer-title">🔍 Comprendre la différence :</div>
+                                <ul>
+                                    <li><strong>Correcteur classique</strong> : signale les erreurs, l'élève corrige</li>
+                                    <li><strong>IA générative</strong> : reformule entièrement, efface le style personnel</li>
+                                    <li><strong>Risque de standardisation</strong> : tous les textes se ressemblent</li>
+                                </ul>
+                            </div>
+                            <div class="answer-category">
+                                <div class="answer-title">⚠️ Impact sur l'apprentissage :</div>
+                                <ul>
+                                    <li><strong>Moins d'appropriation</strong> des règles grammaticales</li>
+                                    <li><strong>Dépendance</strong> à l'outil sans comprendre les corrections</li>
+                                    <li><strong>Perte de la voix personnelle</strong> et du style d'écriture</li>
+                                </ul>
+                            </div>
+                            <div class="answer-category">
+                                <div class="answer-title">🎯 Usage raisonnable à promouvoir :</div>
+                                <ul>
+                                    <li><strong>Phase de relecture finale</strong> uniquement, pas pendant la rédaction</li>
+                                    <li><strong>Analyser les corrections proposées</strong> plutôt que les accepter aveuglément</li>
+                                    <li><strong>Garder une version avant/après</strong> pour documenter le processus</li>
+                                    <li><strong>Privilégier</strong> l'écriture manuscrite en cours pour l'ancrage mémoriel</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="action-btn" onclick="validatePart4()">Passer à la synthèse</button>
+        </div>
+
+        <!-- PARTIE 5 -->
+        <div class="section" id="section5">
+            <h2>📝 Synthèse</h2>
+            <div class="instruction">
+                <div class="synthesis-stats">
+                    <div style="font-size: 1.3em; font-weight: 700; color: var(--primary); margin-bottom: 15px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        💬 « En 2023, 89% des étudiants français utilisent des IA génératives pour leurs travaux. »
+                        <div style="font-size: 0.75em; margin-top: 10px; color: var(--text-light); font-weight: 400;">
+                            Source : Étude IPSOS, septembre 2023
+                        </div>
+                    </div>
+                    <p style="margin-top: 20px; font-size: 1.1em;"><strong>Face à cette réalité, quelle doit être la posture des enseignants ?</strong></p>
+                </div>
+            </div>
+            <div class="synthesis-section">
+                <textarea class="textarea-response" id="finalSynthesis" placeholder="Répondez en développant :
+- Comment concilier encadrement et formation critique ?
+- Quelles compétences essentielles développer chez les élèves ?
+- Comment adapter vos pratiques pédagogiques selon votre niveau d'enseignement ?
+- Quels principes du cadre national intégrer dans votre approche ?"></textarea>
+                <button class="action-btn" onclick="validateSynthesis()">Valider ma synthèse</button>
+                <button class="action-btn" id="copyBtn" style="display: none;" onclick="copyText()">📋 Copier pour le Digipad</button>
+            </div>
+        </div>
+
+        <!-- PARTIE 6 -->
+        <div class="section" id="section6">
+            <h2>🎉 Bilan de l'atelier</h2>
+            <div class="bilan-box">
+                <p><strong>Points clés à retenir :</strong></p>
+                <p>✔ Les IA génératives <strong>imitent</strong>, mais ne comprennent pas</p>
+                <p>✔ Leur usage est <strong>massif</strong> : il faut <strong>anticiper</strong></p>
+                <p>✔ La posture enseignante doit être <strong>proactive</strong></p>
+                <p style="margin-top: 25px; font-style: italic; color: var(--primary);">L'enjeu : préparer les élèves à un monde où l'IA sera omniprésente.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let draggedItem = null;
+
+        document.querySelectorAll('.draggable-item').forEach(item => {
+            item.addEventListener('dragstart', function() {
+                draggedItem = this;
+                this.style.opacity = '0.5';
+            });
+            item.addEventListener('dragend', function() {
+                this.style.opacity = '1';
+            });
+        });
+
+        document.querySelectorAll('.category-box').forEach(box => {
+            box.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('over');
+            });
+            box.addEventListener('dragleave', function() {
+                this.classList.remove('over');
+            });
+            box.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('over');
+                if (draggedItem) {
+                    const itemText = draggedItem.textContent;
+                    const itemCategory = draggedItem.dataset.category;
+                    const content = this.querySelector('.category-content');
+                    const placedItem = document.createElement('div');
+                    placedItem.className = 'placed-item';
+                    placedItem.textContent = itemText;
+                    placedItem.dataset.original = itemCategory;
+                    placedItem.addEventListener('click', function() {
+                        const originalItem = Array.from(document.querySelectorAll('.draggable-item'))
+                            .find(item => item.textContent === itemText);
+                        if (originalItem) {
+                            originalItem.classList.remove('placed');
+                        }
+                        this.remove();
+                    });
+                    content.appendChild(placedItem);
+                    draggedItem.classList.add('placed');
+                }
+            });
+        });
+
+        function checkCategories() {
+            let correct = 0;
+            let total = 0;
+            const corrections = {
+                'recommandation': ['Netflix suggère des films', 'Spotify crée des playlists', 'Amazon propose des produits'],
+                'reconnaissance': ['Déverrouillage par empreinte', 'Identification des visages', 'Filtres Instagram'],
+                'prediction': ['Prévisions météo avancées', 'Détection de fraude bancaire', 'GPS optimise l\'itinéraire'],
+                'traitement': ['Correcteur orthographique', 'Traduction Google', 'Filtres anti-spam']
+            };
+
+            let feedback = '<div style="text-align: left; max-width: 700px; margin: 20px auto;">';
+            
+            document.querySelectorAll('.category-box').forEach(box => {
+                const category = box.dataset.category;
+                const categoryName = box.querySelector('div').textContent;
+                const placedItems = box.querySelectorAll('.placed-item');
+                const userAnswers = Array.from(placedItems).map(item => item.textContent.replace(' ✕', '').trim());
+                const correctAnswers = corrections[category];
+                
+                feedback += `<div style="margin-bottom: 20px; padding: 15px; background: rgba(74, 175, 115, 0.05); border-radius: 10px; border-left: 4px solid var(--primary);">`;
+                feedback += `<strong style="color: var(--primary);">${categoryName}</strong><br>`;
+                
+                correctAnswers.forEach(answer => {
+                    if (userAnswers.includes(answer)) {
+                        feedback += `<span style="color: #28a745;">✔ ${answer}</span><br>`;
+                        correct++;
+                    } else {
+                        feedback += `<span style="color: #dc3545;">✗ ${answer}</span> <em style="font-size: 0.9em; color: #666;">(manquant)</em><br>`;
+                    }
+                });
+                
+                userAnswers.forEach(answer => {
+                    if (!correctAnswers.includes(answer)) {
+                        feedback += `<span style="color: #dc3545;">✗ ${answer}</span> <em style="font-size: 0.9em; color: #666;">(ne va pas ici)</em><br>`;
+                    }
+                });
+                
+                feedback += `</div>`;
+                total += correctAnswers.length;
+            });
+
+            feedback += `<div style="text-align: center; margin-top: 20px; padding: 15px; background: rgba(74, 144, 226, 0.1); border-radius: 10px;">`;
+            feedback += `<strong>Score : ${correct}/${total}</strong><br>`;
+            feedback += `<p style="margin-top: 10px; font-size: 0.95em;">Les IA de <strong>recommandation</strong> analysent vos goûts pour suggérer du contenu.<br>`;
+            feedback += `Les IA de <strong>reconnaissance</strong> identifient des images, visages, empreintes.<br>`;
+            feedback += `Les IA de <strong>prédiction</strong> anticipent des résultats futurs (météo, fraude, trajets).<br>`;
+            feedback += `Les IA de <strong>traitement du langage</strong> comprennent et manipulent le texte.</p>`;
+            feedback += `</div></div>`;
+
+            const result = document.getElementById('result1');
+            result.className = 'result success';
+            result.innerHTML = feedback;
+            
+            document.getElementById('nextBtn1').style.display = 'block';
+        }
+
+        function toggleStep(step) {
+            const isActive = step.classList.contains('active');
+            document.querySelectorAll('.schema-step').forEach(s => s.classList.remove('active'));
+            if (!isActive) {
+                step.classList.add('active');
+            }
+        }
+
+        function validatePart2() {
+            goToSection(3);
+        }
+
+        function validatePart4() {
+            const exploredCases = document.querySelectorAll('.case-answers.show').length;
+            if (exploredCases >= 2) {
+                goToSection(5);
+            } else {
+                alert('⚠️ Explorez au moins 2 cas pratiques !');
+            }
+        }
+
+        function showAnswers(caseNum) {
+            document.getElementById('answers' + caseNum).classList.add('show');
+        }
+
+        function validateSynthesis() {
+            const text = document.getElementById('finalSynthesis').value.trim();
+            if (text.length > 50) {
+                document.getElementById('copyBtn').style.display = 'block';
+                goToSection(6);
+            } else {
+                alert('Développez davantage (minimum 50 caractères).');
+            }
+        }
+
+        function copyText() {
+            const text = document.getElementById('finalSynthesis').value.trim();
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Texte copié !');
+            });
+        }
+
+        function goToSection(num) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('section' + num).classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
